@@ -1,25 +1,41 @@
-name: ci
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 20, 22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+
       - name: Verify zero dependencies
-        run: node -e "const p=require('./package.json'); if(Object.keys(p.dependencies).length||Object.keys(p.devDependencies).length) process.exit(1)"
-      - name: Build CommonJS
-        run: npm run build
-      - name: Run deterministic tests
-        run: node --test tests/
+        shell: bash
+        run: node -e "const p=require('./package.json'); if(Object.keys(p.dependencies || {}).length!==0 || Object.keys(p.devDependencies || {}).length!==0) process.exit(1)"
+
+      - name: Verify the CommonJS artifact
+        run: node scripts/build-cjs.mjs --check
+
+      - name: Run the test suite
+        run: npm test
+
+      - name: Pack dry run
+        run: npm pack --dry-run

@@ -1,4 +1,4 @@
-# csvshield
+# @aarivbuildz/csvshield
 
 Zero-dependency CSV and TSV security toolkit for Node.js. csvshield stops CWE-1236 spreadsheet formula injection and DDE payloads before a CSV ever reaches Excel, LibreOffice, Google Sheets or Numbers. Pure ECMAScript, no runtime dependencies, ESM plus CommonJS plus TypeScript declarations.
 
@@ -9,15 +9,15 @@ A cell beginning with `=`, `+`, `-`, `@`, a tab, a carriage return, a newline or
 ## Install
 
 ```sh
-npm install csvshield
+npm install @aarivbuildz/csvshield
 ```
 
-Requires Node.js 20 or newer. The package has no dependencies and no build step at install time.
+Requires Node.js 18 or newer. The package has no dependencies and no build step at install time.
 
 ## Quick start
 
 ```js
-import { sanitizeCell, stringifySafeCsv, parseSafeCsv, inspectCsv } from 'csvshield';
+import { sanitizeCell, stringifySafeCsv, parseSafeCsv, inspectCsv } from '@aarivbuildz/csvshield';
 
 sanitizeCell('=SUM(A1:A9)');        // "'=SUM(A1:A9)"
 sanitizeCell('-42', { mode: 'preserve-numbers' }); // "-42"
@@ -34,10 +34,10 @@ inspectCsv('name,formula\nAlice,=1\n');
 CommonJS:
 
 ```js
-const { sanitizeCell } = require('csvshield');
+const { sanitizeCell } = require('@aarivbuildz/csvshield');
 ```
 
-The `csvshield/core` subpath exposes the same API without the package index re-export layer.
+The `@aarivbuildz/csvshield/core` subpath exposes the same API without the package index re-export layer.
 
 ## API
 

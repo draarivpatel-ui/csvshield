@@ -23,7 +23,7 @@ There is nothing to install: the project has no runtime or development dependenc
 
 ## Pull requests
 
-Explain the threat addressed, reference any issue, and show the exact malicious input and neutralized output. New defenses must include a bypass attempt that fails after the fix. All tests must pass on Node.js 20 and newer before review.
+Explain the threat addressed, reference any issue, and show the exact malicious input and neutralized output. New defenses must include a bypass attempt that fails after the fix. All tests must pass on Node.js 18 and newer before review.
 
 ## Commit style
 

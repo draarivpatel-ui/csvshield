@@ -17,7 +17,7 @@ const write = (rel, content) => {
   writeFileSync(path, content.replace(/__COUNT__/g, String(testCount)));
 };
 
-write('README.md', `# csvshield
+write('README.md', `# @aarivbuildz/csvshield
 
 Zero-dependency CSV and TSV security toolkit for Node.js. csvshield stops CWE-1236 spreadsheet formula injection and DDE payloads before a CSV ever reaches Excel, LibreOffice, Google Sheets or Numbers. Pure ECMAScript, no runtime dependencies, ESM plus CommonJS plus TypeScript declarations.
 
@@ -28,15 +28,15 @@ A cell beginning with \`=\`, \`+\`, \`-\`, \`@\`, a tab, a carriage return, a ne
 ## Install
 
 \`\`\`sh
-npm install csvshield
+npm install @aarivbuildz/csvshield
 \`\`\`
 
-Requires Node.js 20 or newer. The package has no dependencies and no build step at install time.
+Requires Node.js 18 or newer. The package has no dependencies and no build step at install time.
 
 ## Quick start
 
 \`\`\`js
-import { sanitizeCell, stringifySafeCsv, parseSafeCsv, inspectCsv } from 'csvshield';
+import { sanitizeCell, stringifySafeCsv, parseSafeCsv, inspectCsv } from '@aarivbuildz/csvshield';
 
 sanitizeCell('=SUM(A1:A9)');        // "'=SUM(A1:A9)"
 sanitizeCell('-42', { mode: 'preserve-numbers' }); // "-42"
@@ -53,10 +53,10 @@ inspectCsv('name,formula\\nAlice,=1\\n');
 CommonJS:
 
 \`\`\`js
-const { sanitizeCell } = require('csvshield');
+const { sanitizeCell } = require('@aarivbuildz/csvshield');
 \`\`\`
 
-The \`csvshield/core\` subpath exposes the same API without the package index re-export layer.
+The \`@aarivbuildz/csvshield/core\` subpath exposes the same API without the package index re-export layer.
 
 ## API
 
@@ -171,7 +171,7 @@ There is nothing to install: the project has no runtime or development dependenc
 
 ## Pull requests
 
-Explain the threat addressed, reference any issue, and show the exact malicious input and neutralized output. New defenses must include a bypass attempt that fails after the fix. All tests must pass on Node.js 20 and newer before review.
+Explain the threat addressed, reference any issue, and show the exact malicious input and neutralized output. New defenses must include a bypass attempt that fails after the fix. All tests must pass on Node.js 18 and newer before review.
 
 ## Commit style
 
@@ -234,29 +234,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 `);
 
-write('.github/workflows/ci.yml', `name: ci
+write('.github/workflows/ci.yml', `name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: \${{ matrix.os }} Node \${{ matrix.node }}
+    runs-on: \${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22, 24]
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 20, 22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
           node-version: \${{ matrix.node }}
+
       - name: Verify zero dependencies
-        run: node -e "const p=require('./package.json'); if(Object.keys(p.dependencies).length||Object.keys(p.devDependencies).length) process.exit(1)"
-      - name: Build CommonJS
-        run: npm run build
-      - name: Run deterministic tests
-        run: node --test tests/
+        shell: bash
+        run: node -e "const p=require('./package.json'); if(Object.keys(p.dependencies || {}).length!==0 || Object.keys(p.devDependencies || {}).length!==0) process.exit(1)"
+
+      - name: Verify the CommonJS artifact
+        run: node scripts/build-cjs.mjs --check
+
+      - name: Run the test suite
+        run: npm test
+
+      - name: Pack dry run
+        run: npm pack --dry-run
 `);

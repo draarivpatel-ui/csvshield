@@ -1,5 +1,5 @@
 {
-  "name": "csvshield",
+  "name": "@aarivbuildz/csvshield",
   "version": "1.0.0",
   "description": "Zero-dependency CSV/TSV formula-injection, DDE and RFC 4180 security toolkit for Node.js",
   "type": "module",
@@ -34,13 +34,13 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "build": "node scripts/build-cjs.mjs",
     "pretest": "node scripts/build-cjs.mjs",
-    "test": "node --test tests/",
-    "test:all": "npm run build && node --test tests/"
+    "test": "node scripts/run-tests.mjs tests/*.test.mjs",
+    "test:all": "npm run build && node scripts/run-tests.mjs tests/*.test.mjs"
   },
   "dependencies": {},
   "devDependencies": {},
@@ -55,5 +55,16 @@
     "zero-dependency",
     "sanitize",
     "spreadsheet"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/draarivpatel-ui/csvshield.git"
+  },
+  "bugs": {
+    "url": "https://github.com/draarivpatel-ui/csvshield/issues"
+  },
+  "homepage": "https://github.com/draarivpatel-ui/csvshield#readme",
+  "publishConfig": {
+    "access": "public"
+  }
 }
