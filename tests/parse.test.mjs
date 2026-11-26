@@ -146,6 +146,20 @@ test('inspectCsv reports safe documents as safe', () => {
   assert.deepEqual(inspectCsv('a,b\n1,2\n'), { safe: true, findings: [] });
 });
 
+test('inspectCsv reports formula triggers in header cells', () => {
+  const leading = inspectCsv('=evil,b\n1,2\n', { hasHeader: true });
+  assert.equal(leading.safe, false);
+  assert.equal(leading.findings.length, 1);
+  assert.equal(leading.findings[0].row, 1);
+  assert.equal(leading.findings[0].col, 1);
+  assert.equal(leading.findings[0].rule, 'leading-trigger');
+  const obfuscated = inspectCsv('​=evil,b\n1,2\n', { hasHeader: true });
+  assert.equal(obfuscated.findings[0].rule, 'obfuscated-trigger');
+  const embedded = inspectCsv('"ok\n=evil",b\n1,2\n', { hasHeader: true });
+  assert.equal(embedded.findings[0].rule, 'embedded-formula');
+  assert.equal(embedded.findings[0].row, 1);
+});
+
 test('inspectCsv respects DoS limits and header modes', () => {
   assert.throws(() => inspectCsv('1\n2\n3\n', { maxRows: 2 }), (e) => e.code === 'ERR_CSV_LIMIT');
   const report = inspectCsv('__proto__\n=1\n', { onDangerousHeader: 'skip' });

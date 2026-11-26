@@ -1,7 +1,7 @@
 /** OWASP / CWE-1236 formula-injection neutralization tests for sanitizeCell. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeCell, findCsvTriggers, isSafeNegativeNumberValue } from '../src/index.mjs';
+import { sanitizeCell, stringifySafeCsv, findCsvTriggers, isSafeNegativeNumberValue } from '../src/index.mjs';
 
 const PREFIX = "'";
 
@@ -108,6 +108,20 @@ test('reject mode throws a structured CsvShieldError', () => {
 test('custom prefix and mode combination works', () => {
   assert.equal(sanitizeCell('=1', { prefix: 'safe:' }), 'safe:=1');
   assert.equal(sanitizeCell('\t=1', { prefix: '[x]' }), '[x]\t=1');
+});
+
+test('unsafe prefixes are rejected so neutralization cannot re-arm a trigger', () => {
+  for (const prefix of ['=', '+', '-', '@', '|', '\t', '\r', '\n', ' ', ' ', '​']) {
+    assert.throws(() => sanitizeCell('=1', { prefix }), (e) => e.code === 'ERR_CSV_OPTION', JSON.stringify(prefix));
+    assert.throws(() => stringifySafeCsv([['=1']], { prefix }), (e) => e.code === 'ERR_CSV_OPTION', JSON.stringify(prefix));
+  }
+});
+
+test('invisible filler and formatter characters cannot hide a leading trigger', () => {
+  for (const wrapper of ['\u000b', '\u000c', '⁡', '⁤', 'ᅠ']) {
+    assert.equal(sanitizeCell(`${wrapper}=1`), `${PREFIX}${wrapper}=1`, wrapper.codePointAt(0).toString(16));
+    assert.equal(findCsvTriggers(`${wrapper}=1`)[0].rule, 'obfuscated-trigger');
+  }
 });
 
 test('preserve-numbers keeps finite negative numbers but neutralizes -expressions', () => {

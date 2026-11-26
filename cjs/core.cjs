@@ -60,8 +60,15 @@ function assertOptions(options, label = 'options') {
   if (options.mode !== undefined && !MODES.has(options.mode)) {
     throw new CsvShieldError(`Unknown policy mode: ${String(options.mode)}`, { code: 'ERR_CSV_OPTION' });
   }
-  if (options.prefix !== undefined && (typeof options.prefix !== 'string' || options.prefix.length === 0)) {
-    throw new CsvShieldError('prefix must be a non-empty string', { code: 'ERR_CSV_OPTION' });
+  if (options.prefix !== undefined) {
+    if (typeof options.prefix !== 'string' || options.prefix.length === 0) {
+      throw new CsvShieldError('prefix must be a non-empty string', { code: 'ERR_CSV_OPTION' });
+    }
+    if (isUnsafePrefix(options.prefix)) {
+      throw new CsvShieldError('prefix must not begin with a formula trigger or an ignorable character', {
+        code: 'ERR_CSV_OPTION',
+      });
+    }
   }
   if (options.delimiter !== undefined) {
     const d = options.delimiter;
@@ -148,9 +155,16 @@ function isObfuscation(ch) {
   if (cp >= 0x2000 && cp <= 0x200f) return true;
   if (cp >= 0x2028 && cp <= 0x202f) return true;
   if (cp === 0x205f || cp === 0x2060 || cp === 0x3000 || cp === 0xfeff || cp === 0xffa0) return true;
+  if (cp >= 0x2061 && cp <= 0x2064) return true;
   if (cp >= 0x2066 && cp <= 0x2069) return true;
-  if (cp === 0x034f || cp === 0x061c || cp === 0x115f || cp === 0x180e || cp === 0x3164 || cp === 0xad) return true;
+  if (cp === 0x034f || cp === 0x061c || cp === 0x115f || cp === 0x1160 || cp === 0x180e || cp === 0x3164 || cp === 0xad) return true;
   return false;
+}
+
+/** The neutralizer prefix must not itself be ignorable or start a formula. */
+function isUnsafePrefix(prefix) {
+  const ch = String.fromCodePoint(prefix.codePointAt(0));
+  return TRIGGERS.has(ch) || isObfuscation(ch);
 }
 
 const SAFE_NEGATIVE = /^-(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
@@ -550,6 +564,17 @@ function inspectCsv(input, options = {}) {
           preview: previewOf(name),
         });
       }
+      const analysis = analyzeCell(name, cfg);
+      for (const finding of analysis.findings) {
+        findings.push({
+          row: 1,
+          col: col + 1,
+          header: null,
+          rule: finding.rule,
+          trigger: finding.trigger,
+          preview: finding.preview,
+        });
+      }
       headers.push(name);
     }
   }
@@ -612,45 +637,43 @@ function stringifySafeCsv(rows, options = {}) {
     throw new CsvShieldError('columns must be an array of strings', { code: 'ERR_CSV_OPTION' });
   }
 
-  let columns = cfg.columns;
   let matrix = [];
   const first = rows[0];
+  let sourceKeys = null;
 
-  if (columns) {
-    for (const name of columns) {
-      if (DANGEROUS_HEADERS.has(name) && cfg.onDangerousHeader === 'throw') {
-        throw new CsvShieldError(`Blocked prototype-pollution header: ${name}`, {
-          code: 'ERR_CSV_PROTOTYPE', row: 1, header: name, trigger: name,
-        });
-      }
-    }
-    matrix = rows.map((record) => columns.map((name) => {
-      const present = record && typeof record === 'object' && Object.prototype.hasOwnProperty.call(record, name);
-      const value = present ? record[name] : '';
-      return value === undefined || value === null ? '' : value;
-    }));
+  if (cfg.columns !== undefined) {
+    sourceKeys = cfg.columns;
   } else if (first && isObject(first)) {
-    columns = Object.keys(first);
-    for (const name of columns) {
-      if (DANGEROUS_HEADERS.has(name) && cfg.onDangerousHeader === 'throw') {
-        throw new CsvShieldError(`Blocked prototype-pollution header: ${name}`, {
-          code: 'ERR_CSV_PROTOTYPE', row: 1, header: name, trigger: name,
-        });
-      }
-    }
-    matrix = rows.map((record) => columns.map((name) => {
-      const present = record && Object.prototype.hasOwnProperty.call(record, name);
-      const value = present ? record[name] : '';
-      return value === undefined || value === null ? '' : value;
-    }));
-  } else {
-    matrix = rows.map((row) => (Array.isArray(row) ? row : [row]));
+    sourceKeys = Object.keys(first);
   }
 
   const lines = [];
-  if (columns) {
-    if (columns.length > cfg.maxColumns) throw limitError('maxColumns', cfg.maxColumns);
-    lines.push(columns.map((name) => serializeField(name, cfg)).join(cfg.delimiter));
+  if (sourceKeys) {
+    const headerEntries = [];
+    for (const key of sourceKeys) {
+      let name = cfg.sanitize ? sanitizeCell(key, cfg) : coerce(key);
+      if (DANGEROUS_HEADERS.has(name)) {
+        if (cfg.onDangerousHeader === 'throw') {
+          throw new CsvShieldError(`Blocked prototype-pollution header: ${name}`, {
+            code: 'ERR_CSV_PROTOTYPE', row: 1, header: name, trigger: name,
+          });
+        }
+        if (cfg.onDangerousHeader === 'skip') continue;
+        name = cfg.prefix + name;
+      }
+      const size = byteLength(name);
+      if (size > cfg.maxCellBytes) throw limitError('maxCellBytes', cfg.maxCellBytes, 1, headerEntries.length + 1);
+      headerEntries.push({ key, name });
+    }
+    if (headerEntries.length > cfg.maxColumns) throw limitError('maxColumns', cfg.maxColumns, 1, 1);
+    matrix = rows.map((record) => headerEntries.map(({ key }) => {
+      const present = record && typeof record === 'object' && Object.prototype.hasOwnProperty.call(record, key);
+      const value = present ? record[key] : '';
+      return value === undefined || value === null ? '' : value;
+    }));
+    lines.push(headerEntries.map(({ name }) => serializeField(name, cfg)).join(cfg.delimiter));
+  } else {
+    matrix = rows.map((row) => (Array.isArray(row) ? row : [row]));
   }
 
   for (let r = 0; r < matrix.length; r++) {

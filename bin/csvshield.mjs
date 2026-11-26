@@ -23,7 +23,8 @@ Options:
   --mode <mode>        prefix | strip | reject | preserve-numbers
   --has-header         Treat the first row as object keys
   --json               Emit JSON output (inspect)
-  --no-bom             Do not prepend a UTF-8 BOM when sanitizing
+  --bom                Prepend a UTF-8 BOM when sanitizing
+  --no-bom             Do not prepend a UTF-8 BOM when sanitizing (default)
   -h, --help           Show this help
 
 Exit codes:
@@ -71,6 +72,7 @@ function parseArgs(argv) {
     }
     if (arg === '--has-header') { options.hasHeader = true; continue; }
     if (arg === '--json') { options.json = true; continue; }
+    if (arg === '--bom') { options.bom = true; continue; }
     if (arg === '--no-bom') { options.bom = false; continue; }
     if (arg.startsWith('-') && arg !== '-') die(`Unknown option ${arg}`);
     if (command === null) command = arg;

@@ -58,8 +58,22 @@ test('stringify validates options and dangerous headers', () => {
     assert.throws(() => stringifySafeCsv([{ [header]: 1 }]), (e) => e.code === 'ERR_CSV_PROTOTYPE', header);
     assert.throws(() => stringifySafeCsv([{ a: 1 }], { columns: [header] }), (e) => e.code === 'ERR_CSV_PROTOTYPE', header);
   }
-  // Explicit columns are always emitted; skip only applies to object-mode parsing.
-  assert.equal(stringifySafeCsv([{ a: 1 }], { columns: ['__proto__'], onDangerousHeader: 'skip' }), '__proto__\r\n\r\n');
+  // The policy applies to stringify too: skip drops the column, prefix renames it.
+  assert.equal(stringifySafeCsv([{ a: 1, b: 2 }], { columns: ['__proto__', 'b'], onDangerousHeader: 'skip' }), 'b\r\n2\r\n');
+  assert.equal(
+    stringifySafeCsv([JSON.parse('{"__proto__":"1"}')], { columns: ['__proto__'], onDangerousHeader: 'prefix' }),
+    "'__proto__\r\n1\r\n",
+  );
+});
+
+test('stringify sanitizes header cells with the same policy as data cells', () => {
+  assert.equal(stringifySafeCsv([{ '=cmd|calc': 'x' }]), "'=cmd|calc\r\nx\r\n");
+  assert.equal(stringifySafeCsv([{ a: 1 }], { columns: ['=1+1', 'a'] }), "'=1+1,a\r\n,1\r\n");
+  assert.equal(stringifySafeCsv([['a']], { columns: ['@SUM(1)'], mode: 'strip' }), 'SUM(1)\r\n\r\n');
+  assert.throws(
+    () => stringifySafeCsv([{ a: 1 }], { columns: ['=1+1'], mode: 'reject' }),
+    (e) => e.code === 'ERR_CSV_FORMULA',
+  );
 });
 
 test('round trip preserves data and neutralizes injections', () => {
@@ -92,6 +106,21 @@ test('CLI sanitize rewrites dangerous cells', () => {
   const result = run(['sanitize', '-', '--has-header', '--mode', 'prefix'], 'a,b\n=1,-42\n');
   assert.equal(result.status, 0);
   assert.equal(result.stdout, 'a,b\n\'=1,\'-42\n');
+});
+
+test('CLI sanitize neutralizes formula headers with --has-header', () => {
+  const result = run(['sanitize', '-', '--has-header'], '=evil,b\n1,2\n');
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, "'=evil,b\n1,2\n");
+});
+
+test('CLI sanitize honors --bom and --no-bom', () => {
+  const withBom = run(['sanitize', '-', '--bom'], 'a,b\n1,2\n');
+  assert.equal(withBom.status, 0);
+  assert.equal(withBom.stdout.charCodeAt(0), 0xfeff);
+  const withoutBom = run(['sanitize', '-', '--no-bom'], 'a,b\n1,2\n');
+  assert.equal(withoutBom.status, 0);
+  assert.equal(withoutBom.stdout.charCodeAt(0) === 0xfeff, false);
 });
 
 test('CLI parse emits JSON lines with sanitized cells and header mode', () => {

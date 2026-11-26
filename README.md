@@ -70,7 +70,7 @@ The `csvshield/core` subpath exposes the same API without the package index re-e
 
 ## Threat model
 
-csvshield covers the trigger prefixes documented by OWASP for CSV injection: `=`, `+`, `-`, `@`, tab, CR, LF and pipe. It also handles leading whitespace, Unicode spaces, BOMs, zero-width and bidirectional controls, repeated triggers, embedded CR/LF smuggling and DDE-shaped payloads such as `=cmd|'/c calc'!A0`. `preserve-numbers` exempts only strict finite negative numeric literals. Object-mode records use `Object.create(null)` and dangerous header names are blocked, skipped or prefixed. All inputs are bounded before parsing to prevent memory exhaustion.
+csvshield covers the trigger prefixes documented by OWASP for CSV injection: `=`, `+`, `-`, `@`, tab, CR, LF and pipe. It also handles leading whitespace, Unicode spaces, BOMs, zero-width, bidirectional, invisible-filler and formatter controls, repeated triggers, embedded CR/LF smuggling and DDE-shaped payloads such as `=cmd|'/c calc'!A0`. `preserve-numbers` exempts only strict finite negative numeric literals. Object-mode records use `Object.create(null)`, header cells are sanitized by the same policy as data cells, dangerous header names are blocked, skipped or prefixed, and a custom `prefix` may not itself begin with a trigger or ignorable character. `inspectCsv` audits header cells as well as data cells. All inputs are bounded before parsing to prevent memory exhaustion.
 
 Out of scope: URL safety inside hyperlink formulas that no longer begin with a trigger, spreadsheet settings that auto-execute non-prefixed content, and malicious file content that was never parsed by csvshield.
 
@@ -84,13 +84,13 @@ csvshield --help
 csvshield --version
 ```
 
-Flags: `--delimiter <char>`, `--mode <mode>`, `--has-header`, `--json`, `--no-bom`. Exit codes: 0 success, 1 findings or security error, 2 usage/input error.
+Flags: `--delimiter <char>`, `--mode <mode>`, `--has-header`, `--json`, `--bom`, `--no-bom`. Exit codes: 0 success, 1 findings or security error, 2 usage/input error.
 
 ## Development
 
 ```sh
 npm run build   # regenerate cjs/ from src/ without dependencies
-npm test        # pretest rebuilds CJS, then runs 216 deterministic node:test cases
+npm test        # pretest rebuilds CJS, then runs 222 deterministic node:test cases
 ```
 
 The ESM source in `src/` is canonical. `scripts/build-cjs.mjs` generates `cjs/`; never hand-edit generated files. Types live in `types/index.d.ts`. See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [GOOD_FIRST_ISSUES.md](GOOD_FIRST_ISSUES.md) for contribution and reporting details.
