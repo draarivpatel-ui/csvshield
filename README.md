@@ -1,5 +1,7 @@
 # @aarivbuildz/csvshield
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/draarivpatel-ui/csvshield/badge)](https://scorecard.dev/viewer/?uri=github.com/draarivpatel-ui/csvshield)
+
 Zero-dependency CSV and TSV security toolkit for Node.js. csvshield stops CWE-1236 spreadsheet formula injection and DDE payloads before a CSV ever reaches Excel, LibreOffice, Google Sheets or Numbers. Pure ECMAScript, no runtime dependencies, ESM plus CommonJS plus TypeScript declarations.
 
 ## Why
