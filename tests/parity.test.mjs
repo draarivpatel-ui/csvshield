@@ -78,7 +78,7 @@ test('error classes reject CJS instances from ESM instanceof checks as expected'
 test('package exports map declares import, require and types for both entries', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.deepEqual(pkg.dependencies, {});
-  assert.deepEqual(pkg.devDependencies, {});
+  assert.deepEqual(pkg.devDependencies, { 'fast-check': '4.10.3' });
   for (const key of ['.', './core']) {
     const entry = pkg.exports[key];
     assert.ok(entry.import.endsWith('.mjs'), key);
