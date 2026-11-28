@@ -500,7 +500,6 @@ function parseSafeCsv(input, options = {}) {
         }
         if (cfg.onDuplicateHeader === 'skip') continue;
         if (cfg.onDuplicateHeader === 'first') continue;
-        seen.set(name, col);
         headers[prior] = name;
         keep[prior] = col;
         continue;

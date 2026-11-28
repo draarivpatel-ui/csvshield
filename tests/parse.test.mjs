@@ -70,6 +70,13 @@ test('duplicate headers obey last, first, skip and throw policies', () => {
   assert.throws(() => parseSafeCsv(input, { hasHeader: true, onDuplicateHeader: 'throw' }), (e) => e.code === 'ERR_CSV_HEADER');
 });
 
+test('last duplicate header policy preserves interleaved unrelated columns', () => {
+  const plain = (records) => records.map((r) => ({ ...r }));
+  assert.deepEqual(plain(parseSafeCsv('a,a,a\n1,2,3\n', { hasHeader: true, onDuplicateHeader: 'last' })), [{ a: '3' }]);
+  assert.deepEqual(plain(parseSafeCsv('a,a,b,a\n1,2,3,4\n', { hasHeader: true, onDuplicateHeader: 'last' })), [{ a: '4', b: '3' }]);
+  assert.deepEqual(plain(parseSafeCsv('a,b,a,b,a\n1,2,3,4,5\n', { hasHeader: true, onDuplicateHeader: 'last' })), [{ a: '5', b: '4' }]);
+});
+
 test('strictColumns rejects ragged rows only when enabled', () => {
   assert.deepEqual(parseSafeCsv('a,b\n1\n', { hasHeader: true }).map((r) => ({ ...r })), [{ a: '1' }]);
   assert.throws(() => parseSafeCsv('a,b\n1\n', { hasHeader: true, strictColumns: true }), (e) => e.code === 'ERR_CSV_COLUMNS');
